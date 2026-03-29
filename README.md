@@ -7,7 +7,7 @@ Singapore Institute of Technology
 
 GymPulse is a real-time gym equipment monitoring system designed for condominium gyms, built on a 2-Raspberry Pi edge computing architecture. It uses computer vision to detect people, track their movement across equipment zones, and determine whether gym machines are actively in use, all of which processed at the edge with no cloud dependency.
 
-A live web dashboard displays zone occupancy, session timers, and usage history. Telegram alerts notify condo gym users when overall gym crowd status changes to HIGH, with a configurable cooldown.
+A live web dashboard displays zone occupancy, session timers, and usage history. Telegram alerts notify condo gym users only when overall gym crowd status is HIGH (with a configurable cooldown). If status is not HIGH, no automatic alert is sent.
 
 ## System Architecture
 
@@ -22,7 +22,7 @@ The two Raspberry Pis communicate over a local network. RPi 1 runs the vision pi
 - **Session continuity (ghost recovery)** — When the tracker briefly loses an ID during occlusion, the system preserves the session state and restores it when the same person reappears nearby, preventing session timer resets.
 - **Validity checking** — Determines whether the zone owner is actually using the machine (based on bounding box centre proximity to equipment centre) rather than just standing nearby.
 - **Live web dashboard** — Real-time zone status, session timers, occupancy counts, unique visitor counts, and historical usage charts served via Flask.
-- **Telegram alerts** — When crowd status changes to HIGH, the bot sends an alert (with cooldown) including crowd status, total people, estimated wait for Zone A/B, and timestamp. Bot commands are available for on-demand status checks.
+- **Telegram alerts** — Automatic alert is triggered only when crowd status is HIGH (with cooldown). If crowd status is not HIGH, no auto-alert is sent. The bot still supports on-demand status checks via command.
 - **Performance profiling** — Built-in 1 Hz CSV logging of FPS, per-stage latency (capture, inference, postprocess, display), CPU usage, memory, and context switches for edge performance analysis.
 
 ### Telegram Notification Example
