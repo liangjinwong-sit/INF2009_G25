@@ -40,7 +40,7 @@ The two Raspberry Pis communicate over a local network. RPi 1 runs the vision pi
 | File | Description |
 |------|-------------|
 | `gym_roi_people_time_v3.py` | RPi 1 vision pipeline — YOLO detection, ByteTrack tracking, zone ownership, MQTT publishing |
-| `app.py` | RPi 3 dashboard — Flask web server, MQTT subscriber, SQLite storage, Telegram bot |
+| `app.py` | RPi 2 dashboard — Flask web server, MQTT subscriber, SQLite storage, Telegram bot |
 | `gym_equipment_zone_records.csv` | Sample zone enter/exit/session records from a test run |
 | `gym_profile_1hz.csv` | Sample 1 Hz performance profiling data (FPS, latency, CPU, memory) |
 
