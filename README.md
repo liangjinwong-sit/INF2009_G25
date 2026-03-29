@@ -22,8 +22,19 @@ The two Raspberry Pis communicate over a local network. RPi 1 runs the vision pi
 - **Session continuity (ghost recovery)** — When the tracker briefly loses an ID during occlusion, the system preserves the session state and restores it when the same person reappears nearby, preventing session timer resets.
 - **Validity checking** — Determines whether the zone owner is actually using the machine (based on bounding box centre proximity to equipment centre) rather than just standing nearby.
 - **Live web dashboard** — Real-time zone status, session timers, occupancy counts, unique visitor counts, and historical usage charts served via Flask.
-- **Telegram alerts** — Configurable notifications when overall occupancy/crowd status turns HIGH (with cooldown), plus bot commands for on-demand status checks.
+- **Telegram alerts** — When crowd status changes to HIGH, the bot sends an alert (with cooldown) including crowd status, total people, estimated wait for Zone A/B, and timestamp. Bot commands are available for on-demand status checks.
 - **Performance profiling** — Built-in 1 Hz CSV logging of FPS, per-stage latency (capture, inference, postprocess, display), CPU usage, memory, and context switches for edge performance analysis.
+
+### Telegram Notification Example
+
+```text
+🚨 GymPulse Alert
+Crowd status: HIGH
+Total people: 6
+Zone A est. wait: 1.0s
+Zone B est. wait: 0.0s
+Timestamp: 2026-03-29 17:36:36
+```
 
 ## Repository Contents
 
