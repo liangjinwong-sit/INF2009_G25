@@ -7,23 +7,13 @@ Singapore Institute of Technology
 
 GymPulse is a real-time gym equipment monitoring system designed for condominium gyms, built on a 2-Raspberry Pi edge computing architecture. It uses computer vision to detect people, track their movement across equipment zones, and determine whether gym machines are actively in use, all of which processed at the edge with no cloud dependency.
 
-A live web dashboard displays zone occupancy, session timers, and usage history. Telegram alerts notify condo gym users when equipment has been occupied beyond a configurable threshold.
+A live web dashboard displays zone occupancy, session timers, and usage history. Telegram alerts notify condo gym users when overall gym crowd status changes to HIGH, with a configurable cooldown.
 
 ## System Architecture
 
-```
-┌──────────────────────┐     MQTT (QoS 0)     ┌──────────────────────┐
-│       RPi 1          │ ──────────────────▶   │       RPi 2          │
-│  (Vision Pipeline)   │                       │  (Dashboard + Alerts)│
-│                      │                       │                      │
-│  • USB Camera        │                       │  • Mosquitto Broker  │
-│  • YOLO26n (NCNN)    │                       │  • Flask Web Server  │
-│  • ByteTrack         │                       │  • SQLite History    │
-│  • Zone Ownership    │                       │  • Telegram Bot      │
-└──────────────────────┘                       └──────────────────────┘
-```
+![GymPulse System Architecture](images/sys_architecture.png)
 
-The two Raspberry Pis communicate over a local network. RPi 1 runs the vision pipeline with a USB camera, publishing zone state to RPi 2's MQTT broker at 1 Hz. RPi 2 serves a live dashboard accessible from any device on the same network.
+The two Raspberry Pis communicate over a local network. RPi 1 runs the vision pipeline with a USB camera and publishes JSON state to the MQTT broker on RPi 2 at 1 Hz. On RPi 2, the Flask + MQTT subscriber updates SQLite snapshots, serves the web dashboard to residents/admin users, and powers Telegram alerts/commands.
 
 ## Key Features
 
@@ -32,17 +22,17 @@ The two Raspberry Pis communicate over a local network. RPi 1 runs the vision pi
 - **Session continuity (ghost recovery)** — When the tracker briefly loses an ID during occlusion, the system preserves the session state and restores it when the same person reappears nearby, preventing session timer resets.
 - **Validity checking** — Determines whether the zone owner is actually using the machine (based on bounding box centre proximity to equipment centre) rather than just standing nearby.
 - **Live web dashboard** — Real-time zone status, session timers, occupancy counts, unique visitor counts, and historical usage charts served via Flask.
-- **Telegram alerts** — Configurable notifications when equipment has been in use beyond a set duration, with bot commands for on-demand status checks.
+- **Telegram alerts** — Configurable notifications when overall occupancy/crowd status turns HIGH (with cooldown), plus bot commands for on-demand status checks.
 - **Performance profiling** — Built-in 1 Hz CSV logging of FPS, per-stage latency (capture, inference, postprocess, display), CPU usage, memory, and context switches for edge performance analysis.
 
 ## Repository Contents
 
 | File | Description |
 |------|-------------|
-| `gym_roi_people_time_v3.py` | RPi 1 vision pipeline — YOLO detection, ByteTrack tracking, zone ownership, MQTT publishing |
-| `app.py` | RPi 2 dashboard — Flask web server, MQTT subscriber, SQLite storage, Telegram bot |
-| `gym_equipment_zone_records.csv` | Sample zone enter/exit/session records from a test run |
-| `gym_profile_1hz.csv` | Sample 1 Hz performance profiling data (FPS, latency, CPU, memory) |
+| `source_codes/gym_roi_people_time_v3.py` | RPi 1 vision pipeline — YOLO detection, ByteTrack tracking, zone ownership, MQTT publishing |
+| `source_codes/app.py` | RPi 2 dashboard — Flask web server, MQTT subscriber, SQLite storage, Telegram bot |
+| `source_codes/gym_equipment_zone_records.csv` | Sample zone enter/exit/session records from a test run |
+| `source_codes/gym_profile_1hz.csv` | Sample 1 Hz performance profiling data (FPS, latency, CPU, memory) |
 
 ## Quick Start
 
@@ -53,7 +43,7 @@ The two Raspberry Pis communicate over a local network. RPi 1 runs the vision pi
 pip install ultralytics opencv-python-headless paho-mqtt psutil numpy
 
 # Run (adjust model path and broker IP as needed)
-python gym_roi_people_time_v3.py
+python source_codes/gym_roi_people_time_v3.py
 ```
 
 Key configuration (edit at the top of the script):
@@ -79,14 +69,14 @@ echo 'TELEGRAM_BOT_TOKEN=your_token' >> telegram.env
 echo 'TELEGRAM_CHAT_ID=your_chat_id' >> telegram.env
 
 # Run
-python app.py
+python source_codes/app.py
 ```
 
 The dashboard is accessible at `http://<RPi2-IP>:5000`.
 
 ## Equipment Zone Configuration
 
-Zones are defined as polygons in pixel coordinates (base resolution 640x480). Edit `BASE_EQUIPMENT_ZONES` in `gym_roi_people_time_v3.py` to match your gym layout:
+Zones are defined as polygons in pixel coordinates (base resolution 640x480). Edit `BASE_EQUIPMENT_ZONES` in `source_codes/gym_roi_people_time_v3.py` to match your gym layout:
 
 ```python
 BASE_EQUIPMENT_ZONES = {
