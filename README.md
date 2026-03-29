@@ -1,11 +1,11 @@
 # GymPulse — Real-Time Gym Equipment Monitoring System
 
-**INF2009: Edge Computing & Analytics — Group 25**
+**INF2009: Edge Computing and Analytics — Group 25**
 Singapore Institute of Technology
 
 ## Overview
 
-GymPulse is a real-time gym equipment monitoring system designed for condominium gyms, built on a 2-Raspberry Pi edge computing architecture. It uses computer vision to detect people, track their movement across equipment zones, and determine whether gym machines are actively in use — all processed at the edge with no cloud dependency.
+GymPulse is a real-time gym equipment monitoring system designed for condominium gyms, built on a 2-Raspberry Pi edge computing architecture. It uses computer vision to detect people, track their movement across equipment zones, and determine whether gym machines are actively in use, all of which processed at the edge with no cloud dependency.
 
 A live web dashboard displays zone occupancy, session timers, and usage history. Telegram alerts notify condo gym users when equipment has been occupied beyond a configurable threshold.
 
@@ -13,7 +13,7 @@ A live web dashboard displays zone occupancy, session timers, and usage history.
 
 ```
 ┌──────────────────────┐     MQTT (QoS 0)     ┌──────────────────────┐
-│       RPi 1          │ ──────────────────▶   │       RPi 3          │
+│       RPi 1          │ ──────────────────▶   │       RPi 2          │
 │  (Vision Pipeline)   │                       │  (Dashboard + Alerts)│
 │                      │                       │                      │
 │  • USB Camera        │                       │  • Mosquitto Broker  │
@@ -23,7 +23,7 @@ A live web dashboard displays zone occupancy, session timers, and usage history.
 └──────────────────────┘                       └──────────────────────┘
 ```
 
-The two Raspberry Pis communicate over a local network. RPi 1 runs the vision pipeline with a USB camera, publishing zone state to RPi 3's MQTT broker at 1 Hz. RPi 3 serves a live dashboard accessible from any device on the same network.
+The two Raspberry Pis communicate over a local network. RPi 1 runs the vision pipeline with a USB camera, publishing zone state to RPi 2's MQTT broker at 1 Hz. RPi 2 serves a live dashboard accessible from any device on the same network.
 
 ## Key Features
 
@@ -60,11 +60,11 @@ Key configuration (edit at the top of the script):
 
 ```python
 MODEL_PATH = "/home/keithpi5/Desktop/Project/yolo26n_ncnn_model"
-MQTT_BROKER = "172.20.10.3"   # IP of RPi 3
+MQTT_BROKER = "172.20.10.3"   # IP of RPi 2
 CAMERA_INDEX = 0
 ```
 
-### RPi 3 — Dashboard + MQTT Broker
+### RPi 2 — Dashboard + MQTT Broker
 
 ```bash
 # Install Mosquitto broker
@@ -82,7 +82,7 @@ echo 'TELEGRAM_CHAT_ID=your_chat_id' >> telegram.env
 python app.py
 ```
 
-The dashboard is accessible at `http://<RPi3-IP>:5000`.
+The dashboard is accessible at `http://<RPi2-IP>:5000`.
 
 ## Equipment Zone Configuration
 
@@ -114,6 +114,6 @@ All vision state is published to `gympulse/rpi1/vision/state` as a JSON payload 
 - **Alerts**: Telegram Bot API
 - **Hardware**: Raspberry Pi 4/5, USB webcam
 
-## Module — INF2009: Edge Computing & Analytics
+## Module — INF2009: Edge Computing and Analytics
 
 Singapore Institute of Technology, Trimester 2, 2025/2026
