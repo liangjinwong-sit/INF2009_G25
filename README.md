@@ -20,7 +20,7 @@ The two Raspberry Pis communicate over a local network. RPi 1 runs the vision pi
 - **Person detection and tracking** — YOLO26n (exported to NCNN for ARM optimisation) detects people in the camera feed. ByteTrack maintains persistent track IDs across frames.
 - **Equipment zone ownership** — Two configurable equipment zones with polygon boundaries. The system assigns a zone owner based on proximity to the equipment centre, with a still-duration gate to prevent walk-through false positives.
 - **Session continuity (ghost recovery)** — When the tracker briefly loses an ID during occlusion, the system preserves the session state and restores it when the same person reappears nearby, preventing session timer resets.
-- **Validity checking** — Determines whether the zone owner is actually using the machine (based on bounding box centre proximity to equipment centre) rather than just standing nearby.
+- **Validity checking** — Determines whether the zone owner is likely using the equipment based on proximity between the person’s bounding box centre and the equipment centre, rather than relying on pose or exercise recognition.
 - **Live web dashboard** — Real-time zone status, session timers, occupancy counts, unique visitor counts, and historical usage charts served via Flask.
 - **Telegram alerts** — Automatic alert is triggered only when crowd status is HIGH (with cooldown). If crowd status is not HIGH, no auto-alert is sent. The bot still supports on-demand status checks via command.
 - **Performance profiling** — Built-in 1 Hz CSV logging of FPS, per-stage latency (capture, inference, postprocess, display), CPU usage, memory, and context switches for edge performance analysis.
@@ -42,7 +42,7 @@ Timestamp: 2026-03-29 17:36:36
 |------|-------------|
 | `source_codes/gym_roi_people_time_v3.py` | RPi 1 vision pipeline — YOLO detection, ByteTrack tracking, zone ownership, MQTT publishing |
 | `source_codes/app.py` | RPi 2 dashboard — Flask web server, MQTT subscriber, SQLite storage, Telegram bot |
-| `source_codes/gym_equipment_zone_records.csv` | Sample zone enter/exit/session records from a test run |
+| `source_codes/gym_equipment_zone_records.csv` | Sample per-zone time-series logs from a test run (occupancy, ownership, and session duration at 1 Hz) |
 | `source_codes/gym_profile_1hz.csv` | Sample 1 Hz performance profiling data (FPS, latency, CPU, memory) |
 
 ## Quick Start
@@ -52,6 +52,9 @@ Timestamp: 2026-03-29 17:36:36
 ```bash
 # Dependencies
 pip install ultralytics opencv-python-headless paho-mqtt psutil numpy
+
+- Use `opencv-python` for local development with display (`cv2.imshow`)
+- Use `opencv-python-headless` for headless deployment on Raspberry Pi
 
 # Run (adjust model path and broker IP as needed)
 python source_codes/gym_roi_people_time_v3.py
