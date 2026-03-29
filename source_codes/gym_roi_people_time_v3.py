@@ -136,7 +136,7 @@ WINDOW_NAME = "Gym Equipment Zone Tracking"
 
 # Raw camera recording
 # Toggle this to True if you want to save the raw camera stream while the script runs.
-SAVE_RAW_VIDEO = True
+SAVE_RAW_VIDEO = False
 RAW_VIDEO_DIR = "."
 RAW_VIDEO_PREFIX = "gym_raw_stream"
 RAW_VIDEO_FOURCC = "MJPG"
@@ -166,11 +166,12 @@ OUT_OF_ZONE_LABEL = "out_of_zone"
 CSV_CLOSE_EXIT = "EXIT"
 CSV_CLOSE_CLOSED = "CLOSED"
 
-# MQTT publish (RPi1 -> RPi3)
+# MQTT publish (RPi1 -> RPi2)
 MQTT_ENABLE = True
-MQTT_BROKER = "172.20.10.3"   # replace with your RPi3 IP
+MQTT_BROKERS = ["192.168.1.2", "172.20.10.3"]
 MQTT_PORT = 1883
 MQTT_TOPIC = "gympulse/rpi1/vision/state"
+mqtt_broker_index = 0
 
 # ----------------------------
 # per-person confidence smoothing
@@ -209,23 +210,76 @@ USAGE_INVALID_RELEASE_SEC = 5.0   # release owner only after this many seconds o
 
 mqtt_client = None
 
+def mqtt_connect_to_available_broker():
+    global mqtt_client, mqtt_broker_index
+
+    last_error = None
+    brokers = MQTT_BROKERS if MQTT_BROKERS else ["127.0.0.1"]
+
+    for offset in range(len(brokers)):
+        broker_index = (mqtt_broker_index + offset) % len(brokers)
+        broker = brokers[broker_index]
+        client = mqtt.Client(client_id="gympulse-rpi1-vision")
+
+        try:
+            client.connect(broker, MQTT_PORT, 60)
+            client.loop_start()
+            mqtt_client = client
+            mqtt_broker_index = broker_index
+            print(f"[MQTT] connected to {broker}:{MQTT_PORT}", flush=True)
+            return True
+        except Exception as e:
+            last_error = e
+            try:
+                client.loop_stop()
+            except Exception:
+                pass
+            print(f"[MQTT] connect failed for {broker}:{MQTT_PORT} -> {e}", flush=True)
+
+    mqtt_client = None
+    if last_error is not None:
+        print(f"[MQTT] unable to connect to any broker: {last_error}", flush=True)
+    return False
+
 
 def mqtt_setup():
-    global mqtt_client
     if not MQTT_ENABLE:
         return
-    mqtt_client = mqtt.Client(client_id="gympulse-rpi1-vision")
-    mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    mqtt_client.loop_start()
+    mqtt_connect_to_available_broker()
 
 
 def mqtt_publish(payload: dict):
-    if not MQTT_ENABLE or mqtt_client is None:
+    global mqtt_client, mqtt_broker_index
+
+    if not MQTT_ENABLE:
         return
+
+    if mqtt_client is None and not mqtt_connect_to_available_broker():
+        return
+
     try:
-        mqtt_client.publish(MQTT_TOPIC, json.dumps(payload), qos=0, retain=True)
+        info = mqtt_client.publish(MQTT_TOPIC, json.dumps(payload), qos=0, retain=True)
+        if info.rc != mqtt.MQTT_ERR_SUCCESS:
+            raise RuntimeError(f"MQTT publish returned rc={info.rc}")
     except Exception as e:
         print("[MQTT] publish failed:", e, flush=True)
+
+        if mqtt_client is not None:
+            try:
+                mqtt_client.loop_stop()
+            except Exception:
+                pass
+            mqtt_client = None
+
+        mqtt_broker_index = (mqtt_broker_index + 1) % max(1, len(MQTT_BROKERS))
+
+        if mqtt_connect_to_available_broker() and mqtt_client is not None:
+            try:
+                info = mqtt_client.publish(MQTT_TOPIC, json.dumps(payload), qos=0, retain=True)
+                if info.rc != mqtt.MQTT_ERR_SUCCESS:
+                    raise RuntimeError(f"MQTT publish returned rc={info.rc}")
+            except Exception as retry_e:
+                print("[MQTT] publish retry failed:", retry_e, flush=True)
 
 
 def _pctl(values, q: float) -> float:
